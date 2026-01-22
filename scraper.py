@@ -179,10 +179,15 @@ def parse_statistics(driver: webdriver.Chrome) -> StatsData:
         p2p_block = StatsBlock(name="p2pDox")
         posting_block = StatsBlock(name="Doxposting")
         
-        # Find all cards
-        cards = soup.find_all('div', class_='card')
+        # Find all top-level cards (direct children of rows)
+        all_cards = soup.find_all('div', class_='card')
         
-        for card in cards:
+        for card in all_cards:
+            # Skip nested cards (those inside other cards)
+            parent_card = card.find_parent('div', class_='card')
+            if parent_card:
+                continue
+            
             # Find card header
             card_header = card.find('div', class_='card-header')
             if not card_header:
@@ -191,11 +196,11 @@ def parse_statistics(driver: webdriver.Chrome) -> StatsData:
             header_text = card_header.get_text(strip=True)
             
             # P2P Bot card
-            if 'P2P Bot' in header_text:
+            if 'P2P' in header_text:
                 logger.info("Parsing P2P Bot card")
                 card_body = card.find('div', class_='card-body')
                 if card_body:
-                    # Find all info-item divs
+                    # Method 1: Find all info-item divs
                     info_items = card_body.find_all('div', class_='info-item')
                     for item in info_items:
                         label = item.find('label')
@@ -204,51 +209,69 @@ def parse_statistics(driver: webdriver.Chrome) -> StatsData:
                             key = label.get_text(strip=True).rstrip(':')
                             value = badge.get_text(strip=True)
                             p2p_block.metrics[key] = value
+                    
+                    # Method 2: Find all d-flex divs with label and badge
+                    if not p2p_block.metrics:
+                        flex_items = card_body.find_all('div', class_='d-flex')
+                        for item in flex_items:
+                            label = item.find('label')
+                            badge = item.find('span', class_='badge')
+                            if label and badge:
+                                key = label.get_text(strip=True).rstrip(':')
+                                value = badge.get_text(strip=True)
+                                p2p_block.metrics[key] = value
             
             # Posting Bot card
-            elif 'Posting Bot' in header_text:
+            elif 'Posting' in header_text:
                 logger.info("Parsing Posting Bot card")
                 card_body = card.find('div', class_='card-body')
                 if card_body:
                     # Parse general statistics section
-                    info_section = card_body.find('div', class_='info-section')
-                    if info_section:
-                        # Find all metric items in general stats
-                        metric_divs = info_section.find_all('div', class_='d-flex')
-                        for div in metric_divs:
-                            label = div.find('label')
-                            badge = div.find('span', class_='badge')
-                            if label and badge:
-                                key = label.get_text(strip=True).rstrip(':')
-                                value = badge.get_text(strip=True)
-                                posting_block.metrics[key] = value
+                    # Look for all d-flex divs that contain label and badge
+                    all_flex_divs = card_body.find_all('div', class_='d-flex')
+                    for div in all_flex_divs:
+                        # Skip if inside nested card
+                        if div.find_parent('div', class_='card border-primary') or div.find_parent('div', class_='card border-info'):
+                            continue
+                        label = div.find('label')
+                        badge = div.find('span', class_='badge')
+                        if label and badge:
+                            key = label.get_text(strip=True).rstrip(':')
+                            value = badge.get_text(strip=True)
+                            posting_block.metrics[key] = value
                     
                     # Parse posts statistics card (nested card with border-primary)
-                    posts_card = card_body.find('div', class_='card border-primary')
+                    posts_card = card_body.find('div', class_=lambda x: x and 'border-primary' in x)
                     if posts_card:
                         posting_block.subsections['Посты'] = {}
-                        # Find all stat boxes
+                        logger.info("Found posts card")
+                        # Find all stat boxes with text-center class
                         stat_boxes = posts_card.find_all('div', class_='text-center')
                         for box in stat_boxes:
-                            value_div = box.find('div', class_='fw-bold')
+                            # Value is in div with fs-3 or fw-bold class
+                            value_div = box.find('div', class_=lambda x: x and ('fs-3' in x or 'fw-bold' in x))
+                            # Label is in div with text-muted class
                             label_div = box.find('div', class_='text-muted')
                             if value_div and label_div:
                                 value = value_div.get_text(strip=True)
                                 label = label_div.get_text(strip=True)
                                 posting_block.subsections['Посты'][label] = value
+                                logger.info(f"Posts: {label} = {value}")
                     
                     # Parse stories statistics card (nested card with border-info)
-                    stories_card = card_body.find('div', class_='card border-info')
+                    stories_card = card_body.find('div', class_=lambda x: x and 'border-info' in x)
                     if stories_card:
                         posting_block.subsections['Сторис'] = {}
+                        logger.info("Found stories card")
                         stat_boxes = stories_card.find_all('div', class_='text-center')
                         for box in stat_boxes:
-                            value_div = box.find('div', class_='fw-bold')
+                            value_div = box.find('div', class_=lambda x: x and ('fs-3' in x or 'fw-bold' in x))
                             label_div = box.find('div', class_='text-muted')
                             if value_div and label_div:
                                 value = value_div.get_text(strip=True)
                                 label = label_div.get_text(strip=True)
                                 posting_block.subsections['Сторис'][label] = value
+                                logger.info(f"Stories: {label} = {value}")
         
         # Assign blocks
         if p2p_block.metrics:
