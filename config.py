@@ -24,8 +24,8 @@ SCHEDULE_HOURS = [int(h) for h in os.getenv("SCHEDULE_HOURS", "0,12").split(",")
 
 # Selenium Configuration for Railway (headless Chrome)
 SELENIUM_HEADLESS = os.getenv("SELENIUM_HEADLESS", "true").lower() == "true"
-CHROME_BIN = os.getenv("CHROME_BIN", "/usr/bin/chromium")
-CHROMEDRIVER_PATH = os.getenv("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")
+CHROME_BIN = os.getenv("CHROME_BIN", "")  # Empty = use default
+CHROMEDRIVER_PATH = os.getenv("CHROMEDRIVER_PATH", "")  # Empty = use webdriver-manager
 
 # Timezone for scheduler
 TIMEZONE = os.getenv("TIMEZONE", "Europe/Moscow")

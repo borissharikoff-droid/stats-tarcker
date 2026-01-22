@@ -38,20 +38,35 @@ def create_driver() -> webdriver.Chrome:
     """Create and configure Chrome WebDriver."""
     options = config.get_chrome_options()
     
-    try:
-        # Try using chromedriver from PATH or specified location
-        if config.CHROMEDRIVER_PATH:
+    driver = None
+    
+    # Method 1: Try using chromedriver from specified path
+    if config.CHROMEDRIVER_PATH:
+        try:
             service = Service(executable_path=config.CHROMEDRIVER_PATH)
             driver = webdriver.Chrome(service=service, options=options)
-        else:
-            # Try webdriver-manager as fallback
+            logger.info("Using chromedriver from specified path")
+        except Exception as e:
+            logger.warning(f"Failed to use specified chromedriver path: {e}")
+    
+    # Method 2: Try webdriver-manager
+    if driver is None:
+        try:
             from webdriver_manager.chrome import ChromeDriverManager
             service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=options)
-    except Exception as e:
-        logger.warning(f"Failed to create driver with specified path: {e}")
-        # Fallback to default
-        driver = webdriver.Chrome(options=options)
+            logger.info("Using chromedriver from webdriver-manager")
+        except Exception as e:
+            logger.warning(f"Failed to use webdriver-manager: {e}")
+    
+    # Method 3: Try default (chromedriver in PATH)
+    if driver is None:
+        try:
+            driver = webdriver.Chrome(options=options)
+            logger.info("Using default chromedriver from PATH")
+        except Exception as e:
+            logger.error(f"Failed to create Chrome driver: {e}")
+            raise
     
     driver.set_page_load_timeout(30)
     return driver

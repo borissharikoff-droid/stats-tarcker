@@ -106,8 +106,8 @@ python main.py
 ├── scraper.py        # Модуль парсинга статистики
 ├── config.py         # Конфигурация
 ├── requirements.txt  # Зависимости Python
+├── Dockerfile        # Docker образ с Chrome
 ├── Procfile          # Конфигурация Railway
 ├── railway.json      # Настройки Railway
-├── nixpacks.toml     # Настройки сборки (Chrome/Chromium)
 └── env.example       # Пример переменных окружения
 ```
