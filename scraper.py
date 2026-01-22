@@ -330,20 +330,19 @@ def format_stats_message(stats_data: StatsData) -> str:
     
     # Format Posting Bot (Doxposting) block
     if stats_data.posting_bot:
-        block_lines = [f"<b>{stats_data.posting_bot.name}</b>"]
-        
         # Main metrics (general stats)
+        block_lines = [f"<b>{stats_data.posting_bot.name}</b>"]
         for key, value in stats_data.posting_bot.metrics.items():
             block_lines.append(f"<b>{key}</b>: {value}")
+        message_parts.append('\n'.join(block_lines))
         
-        # Subsections (Posts, Stories)
+        # Subsections as separate blocks (Posts, Stories)
         for section_name, section_metrics in stats_data.posting_bot.subsections.items():
             if section_metrics:
-                block_lines.append(f"\n<b>{section_name}</b>")
+                section_lines = [f"<b>{section_name}</b>"]
                 for key, value in section_metrics.items():
-                    block_lines.append(f"<b>{key}</b>: {value}")
-        
-        message_parts.append('\n'.join(block_lines))
+                    section_lines.append(f"<b>{key}</b>: {value}")
+                message_parts.append('\n'.join(section_lines))
     
     if not message_parts:
         return "<b>Статистика</b>: данные не найдены"
