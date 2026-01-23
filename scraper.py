@@ -342,7 +342,9 @@ def format_stats_message(stats_data: StatsData, diffs: Optional[Dict] = None) ->
     """
     if stats_data.error:
         from datetime import datetime
-        now = datetime.now()
+        import pytz
+        moscow_tz = pytz.timezone('Europe/Moscow')
+        now = datetime.now(moscow_tz)
         date_str = now.strftime("%d.%m.%Y")
         time_str = now.strftime("%H:%M")
         return f"<b>Ошибка получения статистики</b>: {stats_data.error}\n\n#Report | {date_str} | {time_str}"
@@ -390,14 +392,19 @@ def format_stats_message(stats_data: StatsData, diffs: Optional[Dict] = None) ->
     
     if not message_parts:
         from datetime import datetime
-        now = datetime.now()
+        import pytz
+        moscow_tz = pytz.timezone('Europe/Moscow')
+        now = datetime.now(moscow_tz)
         date_str = now.strftime("%d.%m.%Y")
         time_str = now.strftime("%H:%M")
         return f"<b>Статистика</b>: данные не найдены\n\n#Report | {date_str} | {time_str}"
     
-    # Join all parts and add #Report with date/time at the end
+    # Join all parts and add #Report with date/time at the end (Moscow time)
     from datetime import datetime
-    now = datetime.now()
+    import pytz
+    
+    moscow_tz = pytz.timezone('Europe/Moscow')
+    now = datetime.now(moscow_tz)
     date_str = now.strftime("%d.%m.%Y")
     time_str = now.strftime("%H:%M")
     

@@ -80,7 +80,9 @@ async def send_stats_to_telegram(bot: telegram.Bot, chat_id: str) -> bool:
         
         # Try to send error notification
         try:
-            now = datetime.now()
+            import pytz
+            moscow_tz = pytz.timezone('Europe/Moscow')
+            now = datetime.now(moscow_tz)
             date_str = now.strftime("%d.%m.%Y")
             time_str = now.strftime("%H:%M")
             await bot.send_message(
