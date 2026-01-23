@@ -176,8 +176,8 @@ def parse_statistics(driver: webdriver.Chrome) -> StatsData:
         soup = BeautifulSoup(page_source, 'lxml')
         
         # Initialize blocks
-        p2p_block = StatsBlock(name="p2pDox")
-        posting_block = StatsBlock(name="Doxposting")
+        p2p_block = StatsBlock(name="@P2PDox_bot")
+        posting_block = StatsBlock(name="@Doxposting")
         
         # Find all top-level cards (direct children of rows)
         all_cards = soup.find_all('div', class_='card')
@@ -341,7 +341,11 @@ def format_stats_message(stats_data: StatsData, diffs: Optional[Dict] = None) ->
         HTML formatted message string
     """
     if stats_data.error:
-        return f"<b>Ошибка получения статистики</b>: {stats_data.error}\n\n\n#Report"
+        from datetime import datetime
+        now = datetime.now()
+        date_str = now.strftime("%d.%m.%Y")
+        time_str = now.strftime("%H:%M")
+        return f"<b>Ошибка получения статистики</b>: {stats_data.error}\n\n#Report | {date_str} | {time_str}"
     
     if diffs is None:
         diffs = {'p2p_bot': {}, 'posting_bot': {}, 'subsections': {}}
@@ -385,11 +389,20 @@ def format_stats_message(stats_data: StatsData, diffs: Optional[Dict] = None) ->
                 message_parts.append('\n'.join(section_lines))
     
     if not message_parts:
-        return "<b>Статистика</b>: данные не найдены\n\n\n#Report"
+        from datetime import datetime
+        now = datetime.now()
+        date_str = now.strftime("%d.%m.%Y")
+        time_str = now.strftime("%H:%M")
+        return f"<b>Статистика</b>: данные не найдены\n\n#Report | {date_str} | {time_str}"
     
-    # Join all parts and add #Report at the end with double newline
+    # Join all parts and add #Report with date/time at the end
+    from datetime import datetime
+    now = datetime.now()
+    date_str = now.strftime("%d.%m.%Y")
+    time_str = now.strftime("%H:%M")
+    
     result = '\n\n'.join(message_parts)
-    result += "\n\n\n#Report"
+    result += f"\n\n#Report | {date_str} | {time_str}"
     
     return result
 

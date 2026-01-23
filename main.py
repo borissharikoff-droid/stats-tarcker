@@ -4,7 +4,7 @@ from datetime import datetime
 
 import telegram
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.constants import ParseMode
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -80,9 +80,12 @@ async def send_stats_to_telegram(bot: telegram.Bot, chat_id: str) -> bool:
         
         # Try to send error notification
         try:
+            now = datetime.now()
+            date_str = now.strftime("%d.%m.%Y")
+            time_str = now.strftime("%H:%M")
             await bot.send_message(
                 chat_id=chat_id,
-                text=f"<b>Ошибка</b>: не удалось получить статистику\n{str(e)}\n\n\n#Report",
+                text=f"<b>Ошибка</b>: не удалось получить статистику\n{str(e)}\n\n#Report | {date_str} | {time_str}",
                 parse_mode=ParseMode.HTML
             )
         except Exception:
@@ -139,6 +142,23 @@ async def chatid_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(message, parse_mode=ParseMode.HTML)
 
 
+async def handle_mention(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle bot mentions in chat - send statistics when bot is mentioned."""
+    chat_id = update.effective_chat.id
+    
+    # Check if bot was mentioned
+    if update.message and update.message.entities:
+        bot_username = (await context.bot.get_me()).username
+        for entity in update.message.entities:
+            if entity.type == "mention":
+                mentioned_text = update.message.text[entity.offset:entity.offset + entity.length]
+                if mentioned_text.lower() == f"@{bot_username.lower()}":
+                    logger.info(f"Bot mentioned in chat {chat_id}")
+                    await update.message.reply_text("Загрузка статистики...")
+                    await send_stats_to_telegram(context.bot, str(chat_id))
+                    return
+
+
 async def main():
     """Main function to run the bot."""
     # Validate configuration
@@ -159,6 +179,9 @@ async def main():
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("stats", stats_command))
     application.add_handler(CommandHandler("chatid", chatid_command))
+    
+    # Add handler for bot mentions
+    application.add_handler(MessageHandler(filters.Entity("mention"), handle_mention))
     
     # Test bot connection
     try:
