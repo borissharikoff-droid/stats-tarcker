@@ -1,17 +1,16 @@
 import asyncio
 import logging
-import io
 from datetime import datetime
 
 import telegram
-from telegram import Update, InputMediaPhoto
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram import Update
+from telegram.ext import Application, CommandHandler, ContextTypes
 from telegram.constants import ParseMode
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 import config
-from scraper import fetch_statistics, format_stats_message, generate_charts
+from scraper import fetch_statistics, format_stats_message
 from storage import stats_to_dict, load_previous_stats, save_current_stats, get_diffs
 
 # Configure logging
@@ -24,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 async def send_stats_to_telegram(bot: telegram.Bot, chat_id: str) -> bool:
     """
-    Fetch statistics and send them to Telegram chat with charts.
+    Fetch statistics and send them to Telegram chat.
     
     Args:
         bot: Telegram Bot instance
@@ -66,36 +65,14 @@ async def send_stats_to_telegram(bot: telegram.Bot, chat_id: str) -> bool:
         logger.info(f"Sending message to chat {chat_id}")
         logger.debug(f"Message content: {message}")
         
-        # Generate charts
-        logger.info("Generating charts...")
-        charts = await loop.run_in_executor(None, generate_charts, stats_data)
-        
-        # Send text message first
+        # Send text message
         await bot.send_message(
             chat_id=chat_id,
             text=message,
             parse_mode=ParseMode.HTML
         )
         
-        # Send charts as photos
-        if charts:
-            logger.info(f"Sending {len(charts)} charts...")
-            media_group = []
-            for chart_name, chart_bytes in charts:
-                media_group.append(
-                    InputMediaPhoto(
-                        media=io.BytesIO(chart_bytes),
-                        caption=chart_name
-                    )
-                )
-            
-            if media_group:
-                await bot.send_media_group(
-                    chat_id=chat_id,
-                    media=media_group
-                )
-        
-        logger.info("Message and charts sent successfully!")
+        logger.info("Message sent successfully!")
         return True
         
     except Exception as e:

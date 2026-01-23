@@ -1,7 +1,6 @@
 import logging
 import time
-import io
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional
 from dataclasses import dataclass, field
 
 from selenium import webdriver
@@ -11,14 +10,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from bs4 import BeautifulSoup
-import matplotlib.pyplot as plt
-import matplotlib
-
-# Use non-interactive backend for server
-matplotlib.use('Agg')
 
 import config
-from storage import stats_to_dict, load_previous_stats, save_current_stats, get_diffs, parse_number
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -399,121 +392,6 @@ def format_stats_message(stats_data: StatsData, diffs: Optional[Dict] = None) ->
     result += "\n\n\n#Report"
     
     return result
-
-
-def generate_charts(stats_data: StatsData) -> List[Tuple[str, bytes]]:
-    """
-    Generate pie charts for statistics.
-    
-    Args:
-        stats_data: StatsData object with parsed statistics
-        
-    Returns:
-        List of tuples (chart_name, image_bytes)
-    """
-    charts = []
-    
-    # Set up Russian font support
-    plt.rcParams['font.family'] = 'DejaVu Sans'
-    
-    # Chart 1: P2P Bot metrics
-    if stats_data.p2p_bot and stats_data.p2p_bot.metrics:
-        fig, ax = plt.subplots(figsize=(8, 6))
-        
-        labels = []
-        values = []
-        for key, value in stats_data.p2p_bot.metrics.items():
-            num = parse_number(value)
-            if num and num > 0:
-                # Shorten long labels
-                short_key = key[:25] + '...' if len(key) > 25 else key
-                labels.append(short_key)
-                values.append(num)
-        
-        if values:
-            colors = ['#4CAF50', '#2196F3', '#FFC107', '#9C27B0', '#FF5722']
-            wedges, texts, autotexts = ax.pie(
-                values, 
-                labels=labels, 
-                autopct='%1.1f%%',
-                colors=colors[:len(values)],
-                startangle=90
-            )
-            ax.set_title('p2pDox', fontsize=16, fontweight='bold')
-            
-            # Save to bytes
-            buf = io.BytesIO()
-            plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor='white')
-            buf.seek(0)
-            charts.append(('p2pDox', buf.getvalue()))
-            plt.close(fig)
-    
-    # Chart 2: Doxposting (Posts and Stories combined)
-    if stats_data.posting_bot and stats_data.posting_bot.subsections:
-        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
-        
-        colors_posts = ['#4CAF50', '#FFC107', '#F44336']  # Green, Yellow, Red
-        colors_stories = ['#2196F3', '#FF9800', '#E91E63']  # Blue, Orange, Pink
-        
-        # Posts pie chart
-        posts = stats_data.posting_bot.subsections.get('Посты', {})
-        if posts:
-            labels = []
-            values = []
-            for key, value in posts.items():
-                num = parse_number(value)
-                if num is not None and num >= 0:
-                    labels.append(key)
-                    values.append(max(num, 0.1))  # Avoid zero for pie chart
-            
-            if values and sum(values) > 0:
-                wedges, texts, autotexts = axes[0].pie(
-                    values,
-                    labels=labels,
-                    autopct=lambda pct: f'{pct:.1f}%' if pct > 1 else '',
-                    colors=colors_posts[:len(values)],
-                    startangle=90
-                )
-                axes[0].set_title('Посты', fontsize=14, fontweight='bold')
-            else:
-                axes[0].text(0.5, 0.5, 'Нет данных', ha='center', va='center')
-                axes[0].set_title('Посты', fontsize=14, fontweight='bold')
-        
-        # Stories pie chart
-        stories = stats_data.posting_bot.subsections.get('Сторис', {})
-        if stories:
-            labels = []
-            values = []
-            for key, value in stories.items():
-                num = parse_number(value)
-                if num is not None and num >= 0:
-                    labels.append(key)
-                    values.append(max(num, 0.1))
-            
-            if values and sum(values) > 0:
-                wedges, texts, autotexts = axes[1].pie(
-                    values,
-                    labels=labels,
-                    autopct=lambda pct: f'{pct:.1f}%' if pct > 1 else '',
-                    colors=colors_stories[:len(values)],
-                    startangle=90
-                )
-                axes[1].set_title('Сторис', fontsize=14, fontweight='bold')
-            else:
-                axes[1].text(0.5, 0.5, 'Нет данных', ha='center', va='center')
-                axes[1].set_title('Сторис', fontsize=14, fontweight='bold')
-        
-        fig.suptitle('Doxposting', fontsize=16, fontweight='bold')
-        plt.tight_layout()
-        
-        # Save to bytes
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor='white')
-        buf.seek(0)
-        charts.append(('Doxposting', buf.getvalue()))
-        plt.close(fig)
-    
-    return charts
 
 
 if __name__ == "__main__":
